@@ -1,0 +1,6 @@
+/.idea/
+/.git/
+go-find-duplicates
+*.txt
+!default_exclusions.txt
+*.csv
