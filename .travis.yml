@@ -1,0 +1,5 @@
+language: go
+arch:
+  - amd64
+go:
+  - 1.16.x

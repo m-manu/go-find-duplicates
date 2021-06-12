@@ -42,7 +42,7 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 	go func(pc *int32, fc int32) {
 		defer wg.Done()
 		time.Sleep(200 * time.Millisecond)
-		for ; atomic.LoadInt32(pc) < fc; {
+		for atomic.LoadInt32(pc) < fc {
 			time.Sleep(2 * time.Second)
 			progress := float64(atomic.LoadInt32(pc)) / float64(fc)
 			fmte.Printf("%2.0f%% processed so far\n", progress*100.0)
