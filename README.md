@@ -24,7 +24,7 @@ To install:
     * For any other OS: [Go downloads page](https://golang.org/dl/)
 2. Run command:
    ```bash
-   go get github.com/m-manu/go-find-duplicates
+   go install github.com/m-manu/go-find-duplicates
    ```
 3. Ensure `$HOME/go/bin` is part of `$PATH`
 
