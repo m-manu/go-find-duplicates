@@ -1,10 +1,18 @@
-FROM golang:1.16.3-alpine3.13 as builder
+FROM golang:1.16.6-alpine3.13 as builder
+
+RUN apk --no-cache add build-base
 
 WORKDIR /opt/go-find-duplicates
 
-ADD . ./
+COPY ./go.mod ./go.sum ./
+
+RUN go mod download
+
+COPY . .
 
 RUN go build
+
+RUN go test ./...
 
 FROM alpine:3.13
 

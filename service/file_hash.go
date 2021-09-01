@@ -1,11 +1,13 @@
 package service
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/utils"
+	"hash"
 	"hash/crc32"
 	"os"
 )
@@ -14,28 +16,24 @@ const (
 	thresholdFileSize = 8 * bytesutil.KIBI
 )
 
-// GetDigest generates entity.FileDigest of the file provided, in an extremely fast manner
-// without compromising the quality of file's uniqueness.
-//
-// When this function was called on approximately 172k files (mix of photos, videos, audio files, PDFs etc.), the
-// uniqueness identified by this matched uniqueness identified by SHA-256 for *all* files
-func GetDigest(path string) (entity.FileDigest, error) {
+// GetDigest generates entity.FileDigest of the file provided
+func GetDigest(path string, isThorough bool) (entity.FileDigest, error) {
 	info, statErr := os.Lstat(path)
 	if statErr != nil {
 		return entity.FileDigest{}, statErr
 	}
-	hash, hashErr := fileHash(path)
+	hash, hashErr := fileHash(path, isThorough)
 	if hashErr != nil {
 		return entity.FileDigest{}, hashErr
 	}
 	return entity.FileDigest{
 		FileExtension: utils.GetFileExt(path),
 		FileSize:      info.Size(),
-		FileFuzzyHash: hash,
+		FileHash:      hash,
 	}, nil
 }
 
-func fileHash(path string) (string, error) {
+func fileHash(path string, isThorough bool) (string, error) {
 	fileInfo, statErr := os.Lstat(path)
 	if statErr != nil {
 		return "", fmt.Errorf("couldn't stat: %+v", statErr)
@@ -46,7 +44,9 @@ func fileHash(path string) (string, error) {
 	var prefix string
 	var bytes []byte
 	var fileReadErr error
-	if fileInfo.Size() <= thresholdFileSize {
+	if isThorough {
+		bytes, fileReadErr = os.ReadFile(path)
+	} else if fileInfo.Size() <= thresholdFileSize {
 		prefix = "f"
 		bytes, fileReadErr = os.ReadFile(path)
 	} else {
@@ -56,13 +56,18 @@ func fileHash(path string) (string, error) {
 	if fileReadErr != nil {
 		return "", fmt.Errorf("couldn't calculate hash: %+v", fileReadErr)
 	}
-	h := crc32.NewIEEE()
+	var h hash.Hash
+	if isThorough {
+		h = sha256.New()
+	} else {
+		h = crc32.NewIEEE()
+	}
 	_, hashErr := h.Write(bytes)
 	if hashErr != nil {
 		return "", fmt.Errorf("error while computing hash: %+v", hashErr)
 	}
-	hash := h.Sum(nil)
-	return prefix + hex.EncodeToString(hash), nil
+	hashBytes := h.Sum(nil)
+	return prefix + hex.EncodeToString(hashBytes), nil
 }
 
 func readCrucialBytes(filePath string, fileSize int64) ([]byte, error) {

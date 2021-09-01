@@ -3,7 +3,8 @@ package service
 import (
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/stretchr/testify/assert"
-	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -12,19 +13,23 @@ func TestConfig(t *testing.T) {
 }
 
 func TestGetDigest(t *testing.T) {
-	goRoot, ok := os.LookupEnv("GOROOT")
-	if !ok {
-		assert.FailNow(t, "Can't run test as GOROOT is not set")
-	}
+	goRoot := runtime.GOROOT()
 	var paths = []string{
-		goRoot + "/src/io/io.go",
-		goRoot + "/src/io/pipe.go",
+		filepath.Join(goRoot, "/src/io/io.go"),
+		filepath.Join(goRoot, "/src/io/pipe.go"),
 	}
 	for _, path := range paths {
-		digest, err := GetDigest(path)
+		digest, err := GetDigest(path, false)
 		assert.Equal(t, nil, err)
 		assert.Greater(t, digest.FileSize, int64(0))
-		assert.Equal(t, 9, len(digest.FileFuzzyHash))
+		assert.Equal(t, 9, len(digest.FileHash))
+		assert.Greater(t, len(digest.FileExtension), 0)
+	}
+	for _, path := range paths {
+		digest, err := GetDigest(path, true)
+		assert.Equal(t, nil, err)
+		assert.Greater(t, digest.FileSize, int64(0))
+		assert.Equal(t, 64, len(digest.FileHash))
 		assert.Greater(t, len(digest.FileExtension), 0)
 	}
 }

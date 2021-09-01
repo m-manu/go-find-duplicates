@@ -12,11 +12,12 @@ import (
 )
 
 // FindDuplicates finds duplicate files in a given set of directories and matching criteria
-func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fileSizeThreshold int64, parallelism int) (
+func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fileSizeThreshold int64, parallelism int,
+	isThorough bool) (
 	duplicates *entity.DigestToFiles, duplicateTotalCount int64, savingsSize int64,
 	allFiles entity.FilePathToMeta, err error,
 ) {
-	fmte.Printf("Scanning...\n", len(directories))
+	fmte.Printf("Scanning %d directories...\n", len(directories))
 	allFiles = make(entity.FilePathToMeta, 10_000)
 	var totalSize int64
 	for _, dirPath := range directories {
@@ -27,15 +28,18 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 		}
 		totalSize += size
 	}
-	fmte.Printf("Done. Scanned %d files of total size %s.\n",
-		len(allFiles), bytesutil.BinaryFormat(totalSize))
+	fmte.Printf("Done. Found %d files of total size %s.\n", len(allFiles), bytesutil.BinaryFormat(totalSize))
 	fmte.Printf("Finding potential duplicates... \n")
 	shortlist := identifyShortList(allFiles)
 	if len(shortlist) == 0 {
 		return
 	}
 	fmte.Printf("Completed. Found %d files that may have one or more duplicates!\n", len(shortlist))
-	fmte.Printf("Scanning for duplicates... \n")
+	if isThorough {
+		fmte.Printf("Thoroughly scanning for duplicates... \n")
+	} else {
+		fmte.Printf("Scanning for duplicates... \n")
+	}
 	var processedCount int32
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -51,7 +55,7 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 	go func(p *int32) {
 		defer wg.Done()
 		duplicates = entity.NewDigestToFiles(len(shortlist))
-		computeDigestsAndGroupThem(shortlist, parallelism, p, duplicates)
+		computeDigestsAndGroupThem(shortlist, parallelism, p, duplicates, isThorough)
 		for digest, files := range duplicates.Map() {
 			numDuplicates := int64(len(files)) - 1
 			duplicateTotalCount += numDuplicates
@@ -64,7 +68,7 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 }
 
 func computeDigestsAndGroupThem(shortlist entity.FileExtAndSizeToFiles, parallelism int,
-	processedCount *int32, duplicates *entity.DigestToFiles,
+	processedCount *int32, duplicates *entity.DigestToFiles, isThorough bool,
 ) {
 	// Find potential duplicates:
 	slKeys := make([]entity.FileExtAndSize, 0, len(shortlist))
@@ -80,7 +84,7 @@ func computeDigestsAndGroupThem(shortlist entity.FileExtAndSizeToFiles, parallel
 			high := (shard + 1) * len(slKeys) / parallelism
 			for _, fileExtAndSize := range slKeys[low:high] {
 				for _, path := range shortlist[fileExtAndSize] {
-					digest, err := GetDigest(path)
+					digest, err := GetDigest(path, isThorough)
 					if err != nil {
 						fmte.Printf("error while scanning %s: %+v\n", path, err)
 						continue

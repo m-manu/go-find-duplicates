@@ -9,9 +9,9 @@ import (
 type FileDigest struct {
 	FileExtension string
 	FileSize      int64
-	FileFuzzyHash string
+	FileHash      string
 }
 
 func (f FileDigest) String() string {
-	return fmt.Sprintf("%v/%v/%v", f.FileExtension, f.FileFuzzyHash, bytesutil.BinaryFormat(f.FileSize))
+	return fmt.Sprintf("%v/%v/%v", f.FileExtension, f.FileHash, bytesutil.BinaryFormat(f.FileSize))
 }

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
-	"encoding/csv"
 	"flag"
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
@@ -15,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -30,9 +27,8 @@ const (
 	exitCodeErrorFindingDuplicates
 	exitCodeErrorCreatingReport
 	exitCodeInvalidOutputMode
+	exitCodeReportFileCreationFailed
 )
-
-const helpStr = "Run \"go-find-duplicates -h\" for usage\n"
 
 //go:embed default_exclusions.txt
 var defaultExclusionsStr string
@@ -42,8 +38,8 @@ func setupExclusionsOpt() func() map[string]struct{} {
 	const exclusionsDefaultValue = ""
 	_, defaultExclusionsExamples := utils.LineSeparatedStrToMap(defaultExclusionsStr)
 	excludesListFilePathPtr := flag.String(exclusionsFlag, exclusionsDefaultValue,
-		fmt.Sprintf("path to file containing newline separated list of file/directory names to be excluded "+
-			"(if this is not set, by default these will be ignored: %s etc.)",
+		fmt.Sprintf("path to file containing newline separated list of file/directory names to be excluded\n"+
+			"(if this is not set, by default these will be ignored:\n%s etc.)",
 			strings.Join(defaultExclusionsExamples, ", ")))
 	return func() map[string]struct{} {
 		excludesListFilePath := *excludesListFilePathPtr
@@ -53,12 +49,14 @@ func setupExclusionsOpt() func() map[string]struct{} {
 			exclusions = defaultExclusions
 		} else {
 			if !utils.IsReadableFile(excludesListFilePath) {
-				fmte.PrintfErr("error: argument to flag -%s should be a file\n"+helpStr, exclusionsFlag)
+				fmte.PrintfErr("error: argument to flag -%s should be a file\n", exclusionsFlag)
+				flag.Usage()
 				os.Exit(exitCodeInvalidExclusions)
 			}
 			rawContents, err := os.ReadFile(excludesListFilePath)
 			if err != nil {
-				fmte.PrintfErr("error: argument to flag -%s isn't readable: %+v\n"+helpStr, exclusionsFlag, err)
+				fmte.PrintfErr("error: argument to flag -%s isn't a readable file: %+v\n", exclusionsFlag, err)
+				flag.Usage()
 				os.Exit(exitCodeExclusionFilesError)
 			}
 			contents := strings.ReplaceAll(string(rawContents), "\r\n", "\n") // Windows
@@ -72,6 +70,14 @@ func setupHelpOpt() func() bool {
 	helpPtr := flag.Bool("help", false, "display help")
 	return func() bool {
 		return *helpPtr
+	}
+}
+
+func setupThoroughOpt() func() bool {
+	thoroughPtr := flag.Bool("thorough", false, "apply thorough check of uniqueness of files\n"+
+		"(caution: this makes the scan very slow!)")
+	return func() bool {
+		return *thoroughPtr
 	}
 }
 
@@ -108,7 +114,7 @@ func setupOutputModeOpt() func() string {
 	return func() string {
 		outputModeStr := strings.ToLower(strings.TrimSpace(*outputModeStrPtr))
 		if _, exists := entity.OutputModes[outputModeStr]; !exists {
-			fmt.Printf("error: invalid output mode '%s'\n"+helpStr, outputModeStr)
+			fmt.Printf("error: invalid output mode '%s'\n", outputModeStr)
 			os.Exit(exitCodeInvalidOutputMode)
 		}
 		return outputModeStr
@@ -117,26 +123,20 @@ func setupOutputModeOpt() func() string {
 
 func setupUsage() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), `Usage:
-  go-find-duplicates [flags] <dir-1> <dir-2> ... <dir-n>
-
-where,
-	arguments are readable directories that need to be scanned for duplicates
-
-Flags (all optional):
-`)
-		flag.PrintDefaults()
+		fmt.Fprintf(flag.CommandLine.Output(), "Run \"go-find-duplicates -help\" for usage\n")
 	}
 }
 
 func readDirectories() (directories []string) {
 	if flag.NArg() < 1 {
+		fmte.Printf("error: no input directories passed\n")
 		flag.Usage()
 		os.Exit(exitCodeInvalidNumArgs)
 	}
 	for i, p := range flag.Args() {
 		if !utils.IsReadableDirectory(p) {
-			fmte.PrintfErr("error: input #%d \"%v\" isn't a readable directory\n"+helpStr, i+1, p)
+			fmte.PrintfErr("error: input #%d \"%v\" isn't a readable directory\n", i+1, p)
+			flag.Usage()
 			os.Exit(exitCodeInputDirectoryNotReadable)
 		}
 		abs, _ := filepath.Abs(p)
@@ -156,87 +156,43 @@ func handlePanic() {
 }
 
 func showHelpAndExit() {
-	fmte.Printf(`go-find-duplicates is a tool to find duplicate files and directories
+	flag.CommandLine.SetOutput(os.Stdout)
+	fmt.Printf(`go-find-duplicates is a tool to find duplicate files and directories
+
+Usage:
+  go-find-duplicates [flags] <dir-1> <dir-2> ... <dir-n>
+
+where,
+  arguments are readable directories that need to be scanned for duplicates
+
+Flags (all optional):
+`)
+	flag.PrintDefaults()
+	fmt.Printf(`
 For more details: https://github.com/m-manu/go-find-duplicates
 `)
-	flag.CommandLine.SetOutput(os.Stdout)
-	flag.Usage()
 	os.Exit(exitCodeSuccess)
-}
-
-func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFiles entity.FilePathToMeta) {
-	runID := time.Now().Format("150405")
-	if outputMode == entity.OutputModeStdOut || outputMode == entity.OutputModeTextFile {
-		var bb bytes.Buffer
-		bb.Grow(duplicates.Size() * 400)
-		for digest, paths := range duplicates.Map() {
-			bb.WriteString(fmt.Sprintf("%s: %d duplicate(s)\n", digest, len(paths)-1))
-			for _, path := range paths {
-				bb.WriteString(fmt.Sprintf("\t%s\n", path))
-			}
-		}
-		if outputMode == entity.OutputModeTextFile {
-			reportFileName := fmt.Sprintf("./duplicates_%s.txt", runID)
-			rcErr := os.WriteFile(reportFileName, bb.Bytes(), 0644)
-			if rcErr != nil {
-				fmte.PrintfErr("error while creating report file %s: %+v", reportFileName, rcErr)
-				os.Exit(exitCodeErrorCreatingReport)
-			}
-			fmte.Printf("View duplicates report here: %s\n", reportFileName)
-		} else if outputMode == entity.OutputModeStdOut {
-			fmte.Printf(`
-==========================
-Report (run id %s)
-==========================
-`, runID)
-		}
-		fmte.Printf(bb.String())
-	} else if outputMode == entity.OutputModeCsvFile {
-		var bb bytes.Buffer
-		bb.Grow(duplicates.Size() * 500)
-		cf := csv.NewWriter(&bb)
-		cf.Write([]string{"file hash", "file size", "last modified", "file path"})
-		for digest, paths := range duplicates.Map() {
-			for _, path := range paths {
-				cf.Write([]string{
-					digest.FileFuzzyHash,
-					strconv.FormatInt(digest.FileSize, 10),
-					time.Unix(allFiles[path].ModifiedTimestamp, 0).Format("02-Jan-2006 03:04:05 PM"),
-					path,
-				})
-			}
-		}
-		cf.Flush()
-		reportFileName := fmt.Sprintf("./duplicates_%s.csv", runID)
-		os.WriteFile(reportFileName, bb.Bytes(), 0644)
-		fmte.Printf("View duplicates report here: %s\n", reportFileName)
-	}
-}
-
-func setupCmdOptions() (
-	isHelp func() bool, getExcludedFiles func() map[string]struct{}, getMinSize func() int64,
-	getOutputMode func() string, getParallelism func() int,
-) {
-	getExcludedFiles = setupExclusionsOpt()
-	isHelp = setupHelpOpt()
-	getMinSize = setupMinSizeOpt()
-	getOutputMode = setupOutputModeOpt()
-	getParallelism = setupParallelismOpt()
-	setupUsage()
-	return
 }
 
 func main() {
 	defer handlePanic()
-	isHelp, getExcludedFiles, getMinSize, getOutputMode, getParallelism := setupCmdOptions()
+	runID := time.Now().Format("150405")
+	getExcludedFiles := setupExclusionsOpt()
+	isHelp := setupHelpOpt()
+	getMinSize := setupMinSizeOpt()
+	getOutputMode := setupOutputModeOpt()
+	getParallelism := setupParallelismOpt()
+	isThorough := setupThoroughOpt()
+	setupUsage()
 	flag.Parse()
 	if isHelp() {
 		showHelpAndExit()
 	}
-	outputMode := getOutputMode()
 	directories := readDirectories()
+	outputMode := getOutputMode()
+	reportFileName := createReportFileIfApplicable(runID, outputMode)
 	duplicates, duplicateTotalCount, savingsSize, allFiles, fdErr :=
-		service.FindDuplicates(directories, getExcludedFiles(), getMinSize(), getParallelism())
+		service.FindDuplicates(directories, getExcludedFiles(), getMinSize(), getParallelism(), isThorough())
 	if fdErr != nil {
 		fmte.PrintfErr("error while finding duplicates: %+v", fdErr)
 		os.Exit(exitCodeErrorFindingDuplicates)
@@ -247,5 +203,22 @@ func main() {
 	}
 	fmte.Printf("Found %d duplicates. A total of %s can be saved by removing them.\n",
 		duplicateTotalCount, bytesutil.BinaryFormat(savingsSize))
-	reportDuplicates(duplicates, outputMode, allFiles)
+	reportDuplicates(duplicates, outputMode, allFiles, runID, reportFileName)
+}
+
+func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
+	if outputMode == entity.OutputModeStdOut {
+		return
+	}
+	if outputMode == entity.OutputModeCsvFile {
+		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
+	} else if outputMode == entity.OutputModeTextFile {
+		reportFileName = fmt.Sprintf("./duplicates_%s.txt", runID)
+	}
+	_, err := os.Create(reportFileName)
+	if err != nil {
+		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
+		os.Exit(exitCodeReportFileCreationFailed)
+	}
+	return
 }
