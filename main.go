@@ -33,23 +33,31 @@ const (
 //go:embed default_exclusions.txt
 var defaultExclusionsStr string
 
-func setupExclusionsOpt() func() map[string]struct{} {
+var flags struct {
+	isHelp           func() bool
+	getOutputMode    func() string
+	getExcludedFiles func() map[string]struct{}
+	getMinSize       func() int64
+	getParallelism   func() int
+	isThorough       func() bool
+}
+
+func setupExclusionsOpt() {
 	const exclusionsFlag = "exclusions"
 	const exclusionsDefaultValue = ""
-	_, defaultExclusionsExamples := utils.LineSeparatedStrToMap(defaultExclusionsStr)
+	defaultExclusions, defaultExclusionsExamples := utils.LineSeparatedStrToMap(defaultExclusionsStr)
 	excludesListFilePathPtr := flag.String(exclusionsFlag, exclusionsDefaultValue,
 		fmt.Sprintf("path to file containing newline separated list of file/directory names to be excluded\n"+
 			"(if this is not set, by default these will be ignored:\n%s etc.)",
 			strings.Join(defaultExclusionsExamples, ", ")))
-	return func() map[string]struct{} {
+	flags.getExcludedFiles = func() map[string]struct{} {
 		excludesListFilePath := *excludesListFilePathPtr
 		var exclusions map[string]struct{}
 		if excludesListFilePath == exclusionsDefaultValue {
-			defaultExclusions, _ := utils.LineSeparatedStrToMap(defaultExclusionsStr)
 			exclusions = defaultExclusions
 		} else {
 			if !utils.IsReadableFile(excludesListFilePath) {
-				fmte.PrintfErr("error: argument to flag -%s should be a file\n", exclusionsFlag)
+				fmte.PrintfErr("error: argument to flag -%s should be a readable file\n", exclusionsFlag)
 				flag.Usage()
 				os.Exit(exitCodeInvalidExclusions)
 			}
@@ -66,33 +74,33 @@ func setupExclusionsOpt() func() map[string]struct{} {
 	}
 }
 
-func setupHelpOpt() func() bool {
+func setupHelpOpt() {
 	helpPtr := flag.Bool("help", false, "display help")
-	return func() bool {
+	flags.isHelp = func() bool {
 		return *helpPtr
 	}
 }
 
-func setupThoroughOpt() func() bool {
+func setupThoroughOpt() {
 	thoroughPtr := flag.Bool("thorough", false, "apply thorough check of uniqueness of files\n"+
 		"(caution: this makes the scan very slow!)")
-	return func() bool {
+	flags.isThorough = func() bool {
 		return *thoroughPtr
 	}
 }
 
-func setupMinSizeOpt() func() int64 {
+func setupMinSizeOpt() {
 	fileSizeThresholdPtr := flag.Uint64("minsize", 4, "minimum size of file in KiB to consider")
-	return func() int64 {
+	flags.getMinSize = func() int64 {
 		return int64(*fileSizeThresholdPtr) * bytesutil.KIBI
 	}
 }
 
-func setupParallelismOpt() func() int {
+func setupParallelismOpt() {
 	const defaultParallelismValue = 0
 	parallelismPtr := flag.Uint("parallelism", defaultParallelismValue,
 		"extent of parallelism (defaults to number of cores minus 1)")
-	return func() int {
+	flags.getParallelism = func() int {
 		if *parallelismPtr == defaultParallelismValue {
 			n := runtime.NumCPU()
 			if n > 1 {
@@ -104,14 +112,14 @@ func setupParallelismOpt() func() int {
 	}
 }
 
-func setupOutputModeOpt() func() string {
+func setupOutputModeOpt() {
 	var sb strings.Builder
 	sb.WriteString("following modes are accepted:\n")
 	for outputMode, description := range entity.OutputModes {
 		sb.WriteString(fmt.Sprintf("%5s = %s\n", outputMode, description))
 	}
 	outputModeStrPtr := flag.String("output", entity.OutputModeTextFile, sb.String())
-	return func() string {
+	flags.getOutputMode = func() string {
 		outputModeStr := strings.ToLower(strings.TrimSpace(*outputModeStrPtr))
 		if _, exists := entity.OutputModes[outputModeStr]; !exists {
 			fmt.Printf("error: invalid output mode '%s'\n", outputModeStr)
@@ -174,31 +182,40 @@ For more details: https://github.com/m-manu/go-find-duplicates
 	os.Exit(exitCodeSuccess)
 }
 
+func setupFlags() {
+	setupExclusionsOpt()
+	setupHelpOpt()
+	setupMinSizeOpt()
+	setupOutputModeOpt()
+	setupParallelismOpt()
+	setupThoroughOpt()
+	setupUsage()
+}
+
 func main() {
 	defer handlePanic()
 	runID := time.Now().Format("150405")
-	getExcludedFiles := setupExclusionsOpt()
-	isHelp := setupHelpOpt()
-	getMinSize := setupMinSizeOpt()
-	getOutputMode := setupOutputModeOpt()
-	getParallelism := setupParallelismOpt()
-	isThorough := setupThoroughOpt()
-	setupUsage()
+	setupFlags()
 	flag.Parse()
-	if isHelp() {
+	if flags.isHelp() {
 		showHelpAndExit()
 	}
 	directories := readDirectories()
-	outputMode := getOutputMode()
+	outputMode := flags.getOutputMode()
 	reportFileName := createReportFileIfApplicable(runID, outputMode)
 	duplicates, duplicateTotalCount, savingsSize, allFiles, fdErr :=
-		service.FindDuplicates(directories, getExcludedFiles(), getMinSize(), getParallelism(), isThorough())
+		service.FindDuplicates(directories, flags.getExcludedFiles(), flags.getMinSize(),
+			flags.getParallelism(), flags.isThorough())
 	if fdErr != nil {
-		fmte.PrintfErr("error while finding duplicates: %+v", fdErr)
+		fmte.PrintfErr("error while finding duplicates: %+v\n", fdErr)
 		os.Exit(exitCodeErrorFindingDuplicates)
 	}
 	if duplicates == nil || duplicates.Size() == 0 {
-		fmte.Printf("No duplicates found!\n")
+		if len(allFiles) == 0 {
+			fmte.Printf("No actions performed!\n")
+		} else {
+			fmte.Printf("No duplicates found!\n")
+		}
 		return
 	}
 	fmte.Printf("Found %d duplicates. A total of %s can be saved by removing them.\n",

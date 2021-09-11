@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	thresholdFileSize = 8 * bytesutil.KIBI
+	thresholdFileSize = 16 * bytesutil.KIBI
 )
 
 // GetDigest generates entity.FileDigest of the file provided
@@ -22,14 +22,14 @@ func GetDigest(path string, isThorough bool) (entity.FileDigest, error) {
 	if statErr != nil {
 		return entity.FileDigest{}, statErr
 	}
-	hash, hashErr := fileHash(path, isThorough)
+	h, hashErr := fileHash(path, isThorough)
 	if hashErr != nil {
 		return entity.FileDigest{}, hashErr
 	}
 	return entity.FileDigest{
 		FileExtension: utils.GetFileExt(path),
 		FileSize:      info.Size(),
-		FileHash:      hash,
+		FileHash:      h,
 	}, nil
 }
 

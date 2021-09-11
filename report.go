@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
-	os "os"
+	"os"
 	"strconv"
 	"time"
 )
@@ -30,7 +30,7 @@ func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFi
 func createTextFileReport(reportFileName string, report bytes.Buffer) {
 	rcErr := os.WriteFile(reportFileName, report.Bytes(), 0644)
 	if rcErr != nil {
-		fmte.PrintfErr("error while creating report file %s: %+v", reportFileName, rcErr)
+		fmte.PrintfErr("error while creating report file %s: %+v\n", reportFileName, rcErr)
 		os.Exit(exitCodeErrorCreatingReport)
 	}
 	fmte.Printf("View duplicates report here: %s\n", reportFileName)

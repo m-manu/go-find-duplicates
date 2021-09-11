@@ -29,6 +29,9 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 		totalSize += size
 	}
 	fmte.Printf("Done. Found %d files of total size %s.\n", len(allFiles), bytesutil.BinaryFormat(totalSize))
+	if len(allFiles) == 0 {
+		return
+	}
 	fmte.Printf("Finding potential duplicates... \n")
 	shortlist := identifyShortList(allFiles)
 	if len(shortlist) == 0 {

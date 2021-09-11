@@ -33,14 +33,13 @@ func TestNonThoroughVsNot(t *testing.T) {
 	exclusions, _ := utils.LineSeparatedStrToMap(exclusionsStr)
 	goRoot := []string{runtime.GOROOT()}
 	fmt.Printf("*** Scanning %s with 'thorough mode' on ***\n", goRoot)
-	_, duplicateCountExpected, savingsSizeExpected, _, err := FindDuplicates(goRoot, exclusions,
+	_, duplicateCountExpected, savingsSizeExpected, _, tErr := FindDuplicates(goRoot, exclusions,
 		4_196, 2, true)
-	if err != nil {
-		assert.FailNow(t, "error while reading GOROOT")
-	}
+	assert.Nil(t, tErr, "error while scanning for duplicates in GOROOT directory")
 	fmt.Printf("*** Scanning %s with 'thorough mode' off ***\n", goRoot)
-	_, duplicateCountActual, savingsSizeActual, _, _ := FindDuplicates(goRoot, exclusions,
+	_, duplicateCountActual, savingsSizeActual, _, ntErr := FindDuplicates(goRoot, exclusions,
 		4_196, 5, false)
+	assert.Nil(t, ntErr, "error while thoroughly scanning for duplicates in GOROOT directory")
 	assert.Equal(t, duplicateCountExpected, duplicateCountActual)
 	assert.Equal(t, savingsSizeExpected, savingsSizeActual)
 }
