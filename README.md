@@ -1,6 +1,6 @@
 # Go Find Duplicates
 
-[![Build Status](https://www.travis-ci.com/m-manu/go-find-duplicates.svg?branch=main)](https://www.travis-ci.com/m-manu/go-find-duplicates)
+[![build-and-test](https://github.com/m-manu/go-find-duplicates/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/m-manu/go-find-duplicates/actions/workflows/build-and-test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/m-manu/go-find-duplicates)](https://goreportcard.com/report/github.com/m-manu/go-find-duplicates)
 [![Go Reference](https://pkg.go.dev/badge/github.com/m-manu/go-find-duplicates.svg)](https://pkg.go.dev/github.com/m-manu/go-find-duplicates)
 [![License](https://img.shields.io/badge/License-Apache%202-blue.svg)](./LICENSE)
