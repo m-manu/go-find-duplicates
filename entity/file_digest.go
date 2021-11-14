@@ -7,9 +7,9 @@ import (
 
 // FileDigest contains properties of a file that makes the file unique to a very high degree of confidence
 type FileDigest struct {
-	FileExtension string
-	FileSize      int64
-	FileHash      string
+	FileExtension string `json:"ext"`
+	FileSize      int64  `json:"size"`
+	FileHash      string `json:"hash"`
 }
 
 func (f FileDigest) String() string {

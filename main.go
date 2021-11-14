@@ -28,6 +28,7 @@ const (
 	exitCodeErrorCreatingReport
 	exitCodeInvalidOutputMode
 	exitCodeReportFileCreationFailed
+	exitCodeWritingToReportFileFailed
 )
 
 //go:embed default_exclusions.txt
@@ -220,7 +221,12 @@ func main() {
 	}
 	fmte.Printf("Found %d duplicates. A total of %s can be saved by removing them.\n",
 		duplicateTotalCount, bytesutil.BinaryFormat(savingsSize))
-	reportDuplicates(duplicates, outputMode, allFiles, runID, reportFileName)
+
+	err := reportDuplicates(duplicates, outputMode, allFiles, runID, reportFileName)
+	if err != nil {
+		fmte.PrintfErr("error while reporting to file: %+v\n", err)
+		os.Exit(exitCodeWritingToReportFileFailed)
+	}
 }
 
 func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
@@ -231,6 +237,8 @@ func createReportFileIfApplicable(runID string, outputMode string) (reportFileNa
 		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
 	} else if outputMode == entity.OutputModeTextFile {
 		reportFileName = fmt.Sprintf("./duplicates_%s.txt", runID)
+	} else if outputMode == entity.OutputModeJSON {
+		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
 	}
 	_, err := os.Create(reportFileName)
 	if err != nil {

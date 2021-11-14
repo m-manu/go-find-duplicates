@@ -58,6 +58,7 @@ Flags (all optional):
     	 text = creates a text file in current directory with basic information
     	  csv = creates a csv file in current directory with detailed information
     	print = just prints the report without creating any file
+       json = creates a JSON file in the current directory with detailed information
     	 (default "text")
   -parallelism uint
     	extent of parallelism (defaults to number of cores minus 1)
