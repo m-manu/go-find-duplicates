@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
@@ -14,7 +15,8 @@ import (
 const bytesPerLineGuess = 500
 
 func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFiles entity.FilePathToMeta,
-	runID string, reportFileName string) {
+	runID string, reportFileName string) error {
+	var err error
 	if outputMode == entity.OutputModeStdOut || outputMode == entity.OutputModeTextFile {
 		reportBytes := getReportAsText(duplicates)
 		if outputMode == entity.OutputModeTextFile {
@@ -24,7 +26,10 @@ func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFi
 		}
 	} else if outputMode == entity.OutputModeCsvFile {
 		createCsvReport(duplicates, allFiles, reportFileName)
+	} else if outputMode == entity.OutputModeJSON {
+		err = createJSONReport(duplicates, allFiles, reportFileName)
 	}
+	return err
 }
 
 func createTextFileReport(reportFileName string, report bytes.Buffer) {
@@ -75,4 +80,28 @@ func createCsvReport(duplicates *entity.DigestToFiles, allFiles entity.FilePathT
 	cf.Flush()
 	os.WriteFile(reportFileName, bb.Bytes(), 0644)
 	fmte.Printf("View duplicates report here: %s\n", reportFileName)
+}
+
+func createJSONReport(duplicates *entity.DigestToFiles, allFiles entity.FilePathToMeta, reportFileName string) error {
+	type duplicateFile struct {
+		entity.FileDigest
+		Paths []string `json:"paths"`
+	}
+	var duplicatesToMarshall []duplicateFile
+
+	for digest, paths := range duplicates.Map() {
+		duplicatesToMarshall = append(duplicatesToMarshall, duplicateFile{
+			digest,
+			paths,
+		})
+	}
+
+	json, err := json.Marshal(duplicatesToMarshall)
+	if err != nil {
+		return err
+	}
+	os.WriteFile(reportFileName, json, 0644)
+
+	fmte.Printf("View duplicates report here: %s\n", reportFileName)
+	return nil
 }
