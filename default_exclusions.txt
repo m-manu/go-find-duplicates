@@ -5,6 +5,7 @@ desktop.ini
 Thumbs.db
 .picasaoriginals
 .picasa.ini
+.Trash
 .Trashes
 .TemporaryItems
 .Spotlight-V100
