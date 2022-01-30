@@ -2,13 +2,13 @@ package main
 
 import (
 	_ "embed"
-	"flag"
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
 	"github.com/m-manu/go-find-duplicates/service"
 	"github.com/m-manu/go-find-duplicates/utils"
+	flag "github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -47,8 +47,8 @@ func setupExclusionsOpt() {
 	const exclusionsFlag = "exclusions"
 	const exclusionsDefaultValue = ""
 	defaultExclusions, defaultExclusionsExamples := utils.LineSeparatedStrToMap(defaultExclusionsStr)
-	excludesListFilePathPtr := flag.String(exclusionsFlag, exclusionsDefaultValue,
-		fmt.Sprintf("path to file containing newline separated list of file/directory names to be excluded\n"+
+	excludesListFilePathPtr := flag.StringP(exclusionsFlag, "x", exclusionsDefaultValue,
+		fmt.Sprintf("path to file containing newline-separated list of file/directory names to be excluded\n"+
 			"(if this is not set, by default these will be ignored:\n%s etc.)",
 			strings.Join(defaultExclusionsExamples, ", ")))
 	flags.getExcludedFiles = func() map[string]struct{} {
@@ -58,13 +58,13 @@ func setupExclusionsOpt() {
 			exclusions = defaultExclusions
 		} else {
 			if !utils.IsReadableFile(excludesListFilePath) {
-				fmte.PrintfErr("error: argument to flag -%s should be a readable file\n", exclusionsFlag)
+				fmte.PrintfErr("error: argument to flag --%s should be a readable file\n", exclusionsFlag)
 				flag.Usage()
 				os.Exit(exitCodeInvalidExclusions)
 			}
 			rawContents, err := os.ReadFile(excludesListFilePath)
 			if err != nil {
-				fmte.PrintfErr("error: argument to flag -%s isn't a readable file: %+v\n", exclusionsFlag, err)
+				fmte.PrintfErr("error: unable to read exclusions file: %+v\n", exclusionsFlag, err)
 				flag.Usage()
 				os.Exit(exitCodeExclusionFilesError)
 			}
@@ -76,22 +76,25 @@ func setupExclusionsOpt() {
 }
 
 func setupHelpOpt() {
-	helpPtr := flag.Bool("help", false, "display help")
+	helpPtr := flag.BoolP("help", "h", false, "display help")
 	flags.isHelp = func() bool {
 		return *helpPtr
 	}
 }
 
 func setupThoroughOpt() {
-	thoroughPtr := flag.Bool("thorough", false, "apply thorough check of uniqueness of files\n"+
-		"(caution: this makes the scan very slow!)")
+	thoroughPtr := flag.BoolP("thorough", "t", false,
+		"apply thorough check of uniqueness of files\n(caution: this makes the scan very slow!)",
+	)
 	flags.isThorough = func() bool {
 		return *thoroughPtr
 	}
 }
 
 func setupMinSizeOpt() {
-	fileSizeThresholdPtr := flag.Uint64("minsize", 4, "minimum size of file in KiB to consider")
+	fileSizeThresholdPtr := flag.Uint64P("minsize", "m", 4,
+		"minimum size of file in KiB to consider",
+	)
 	flags.getMinSize = func() int64 {
 		return int64(*fileSizeThresholdPtr) * bytesutil.KIBI
 	}
@@ -99,7 +102,7 @@ func setupMinSizeOpt() {
 
 func setupParallelismOpt() {
 	const defaultParallelismValue = 0
-	parallelismPtr := flag.Uint("parallelism", defaultParallelismValue,
+	parallelismPtr := flag.Uint8P("parallelism", "p", defaultParallelismValue,
 		"extent of parallelism (defaults to number of cores minus 1)")
 	flags.getParallelism = func() int {
 		if *parallelismPtr == defaultParallelismValue {
@@ -119,7 +122,7 @@ func setupOutputModeOpt() {
 	for outputMode, description := range entity.OutputModes {
 		sb.WriteString(fmt.Sprintf("%5s = %s\n", outputMode, description))
 	}
-	outputModeStrPtr := flag.String("output", entity.OutputModeTextFile, sb.String())
+	outputModeStrPtr := flag.StringP("output", "o", entity.OutputModeTextFile, sb.String())
 	flags.getOutputMode = func() string {
 		outputModeStr := strings.ToLower(strings.TrimSpace(*outputModeStrPtr))
 		if _, exists := entity.OutputModes[outputModeStr]; !exists {
@@ -132,13 +135,13 @@ func setupOutputModeOpt() {
 
 func setupUsage() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Run \"go-find-duplicates -help\" for usage\n")
+		fmte.PrintfErr("Run \"go-find-duplicates --help\" for usage\n")
 	}
 }
 
 func readDirectories() (directories []string) {
 	if flag.NArg() < 1 {
-		fmte.Printf("error: no input directories passed\n")
+		fmte.PrintfErr("error: no input directories passed\n")
 		flag.Usage()
 		os.Exit(exitCodeInvalidNumArgs)
 	}
