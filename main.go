@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"time"
 )
@@ -41,6 +42,7 @@ var flags struct {
 	getMinSize       func() int64
 	getParallelism   func() int
 	isThorough       func() bool
+	moveTo           func() string // to move dup files to other dir
 }
 
 func setupExclusionsOpt() {
@@ -133,6 +135,13 @@ func setupOutputModeOpt() {
 	}
 }
 
+func setupMoveToOpt() {
+	moveToStrPtr := flag.StringP("moveto", "v", "", "move dup files to another dir")
+	flags.moveTo = func() string {
+		return *moveToStrPtr
+	}
+}
+
 func setupUsage() {
 	flag.Usage = func() {
 		fmte.PrintfErr("Run \"go-find-duplicates --help\" for usage\n")
@@ -191,6 +200,7 @@ func setupFlags() {
 	setupHelpOpt()
 	setupMinSizeOpt()
 	setupOutputModeOpt()
+	setupMoveToOpt()
 	setupParallelismOpt()
 	setupThoroughOpt()
 	setupUsage()
@@ -230,6 +240,10 @@ func main() {
 		fmte.PrintfErr("error while reporting to file: %+v\n", err)
 		os.Exit(exitCodeWritingToReportFileFailed)
 	}
+	if moveToDir := flags.moveTo(); len(moveToDir) > 0 {
+		fmte.Printf("move to:%s\n", moveToDir)
+		moveToNewDir(duplicates, allFiles)
+	}
 }
 
 func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
@@ -249,4 +263,50 @@ func createReportFileIfApplicable(runID string, outputMode string) (reportFileNa
 		os.Exit(exitCodeReportFileCreationFailed)
 	}
 	return
+}
+
+func moveToNewDir(duplicates *entity.DigestToFiles, allFiles entity.FilePathToMeta) {
+	moveToDir, err := filepath.Abs(flags.moveTo())
+	if err != nil {
+		fmte.Printf("not a abs path: err=%s\n", err.Error())
+		return
+	}
+	moveToDir = filepath.Clean(moveToDir)
+	for _, item := range duplicates.Map() {
+		sort.Slice(item, func(i, j int) bool {
+			path1 := item[i]
+			path2 := item[j]
+			arr1 := strings.Split(path1, "/")
+			arr2 := strings.Split(path2, "/")
+			if len(arr1) != len(arr2) {
+				return len(arr1) > len(arr2)
+			}
+			meta1, ok1 := allFiles[path1]
+			meta2, ok2 := allFiles[path2]
+			if ok1 && ok2 {
+				if meta1.Size != meta2.Size {
+					panic("file size not same: file1=" + item[i] + ",file2=" + item[j])
+				}
+				if meta1.ModifiedTimestamp != meta2.ModifiedTimestamp {
+					return meta1.ModifiedTimestamp > meta2.ModifiedTimestamp
+				}
+			}
+			return path1 < path2
+		})
+		for _, f := range item[1:] {
+			newPath := filepath.Join(moveToDir, f)
+			fmte.Printf("mv %s %s\n", f, newPath)
+			d := filepath.Dir(newPath)
+			if _, err := os.Stat(d); os.IsNotExist(err) {
+				if err = os.MkdirAll(d, os.ModePerm); err != nil {
+					fmte.Printf("mkdir error, dir=%s, err=%s\n", d, err.Error())
+					continue
+				}
+			}
+			err := os.Rename(f, newPath)
+			if err != nil {
+				fmte.Printf("\terr=%s\n", err.Error())
+			}
+		}
+	}
 }

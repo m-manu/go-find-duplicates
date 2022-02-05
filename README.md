@@ -50,6 +50,7 @@ Flags (all optional):
                             .DS_Store, System Volume Information, $RECYCLE.BIN etc.)
   -h, --help                display help
   -m, --minsize uint        minimum size of file in KiB to consider (default 4)
+  -v, --moveto string       move dup files to another dir
   -o, --output string       following modes are accepted:
                             print = just prints the report without creating any file
                              json = creates a JSON file in the current directory with detailed information
