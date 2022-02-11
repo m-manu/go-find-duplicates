@@ -66,7 +66,7 @@ For more details: https://github.com/m-manu/go-find-duplicates
 ## Running this through a Docker container
 
 ```bash
-docker run --rm -v /Volumes/PortableHD:/mnt/PortableHD manumk/go-find-duplicates:latest go-find-duplicates -output=print /mnt/PortableHD
+docker run --rm -v /Volumes/PortableHD:/mnt/PortableHD manumk/go-find-duplicates:latest go-find-duplicates -o print /mnt/PortableHD
 ```
 
 In above command:
