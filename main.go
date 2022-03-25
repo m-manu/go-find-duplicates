@@ -1,3 +1,7 @@
+/*
+A blazingly-fast simple-to-use tool to find duplicate files (photos, videos, music, documents etc.) on your computer,
+portable hard drives etc.
+*/
 package main
 
 import (
