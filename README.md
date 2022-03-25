@@ -51,10 +51,10 @@ Flags (all optional):
   -h, --help                display help
   -m, --minsize uint        minimum size of file in KiB to consider (default 4)
   -o, --output string       following modes are accepted:
-                            print = just prints the report without creating any file
-                             json = creates a JSON file in the current directory with detailed information
                              text = creates a text file in current directory with basic information
                               csv = creates a csv file in current directory with detailed information
+                            print = just prints the report without creating any file
+                             json = creates a JSON file in the current directory with basic information
                              (default "text")
   -p, --parallelism uint8   extent of parallelism (defaults to number of cores minus 1)
   -t, --thorough            apply thorough check of uniqueness of files
