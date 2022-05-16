@@ -12,13 +12,13 @@ portable hard drives etc.
 
 ## How to install?
 
-1. Install Go version at least **1.16**
+1. Install Go version at least **1.17**
     * On Ubuntu: `snap install go`
     * On Mac: `brew install go`
     * For any other OS: [Go downloads page](https://golang.org/dl/)
 2. Run command:
    ```bash
-   go install github.com/m-manu/go-find-duplicates
+   go install github.com/m-manu/go-find-duplicates@latest
    ```
 3. Ensure `$HOME/go/bin` is part of `$PATH`
 

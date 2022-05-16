@@ -4,3 +4,4 @@ go-find-duplicates
 !default_exclusions.txt
 *.csv
 *.json
+*.sh
