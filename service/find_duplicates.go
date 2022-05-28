@@ -57,9 +57,10 @@ func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fil
 	}(&processedCount, int32(len(shortlist)))
 	go func(p *int32) {
 		defer wg.Done()
-		duplicates = entity.NewDigestToFiles(len(shortlist))
+		duplicates = entity.NewDigestToFiles()
 		computeDigestsAndGroupThem(shortlist, parallelism, p, duplicates, isThorough)
-		for digest, files := range duplicates.Map() {
+		for iter := duplicates.Iterator(); iter.HasNext(); {
+			digest, files := iter.Next()
 			numDuplicates := int64(len(files)) - 1
 			duplicateTotalCount += numDuplicates
 			savingsSize += numDuplicates * digest.FileSize
@@ -100,7 +101,8 @@ func computeDigestsAndGroupThem(shortlist entity.FileExtAndSizeToFiles, parallel
 	}
 	wg.Wait()
 	// Remove non-duplicates
-	for digest, files := range duplicates.Map() {
+	for iter := duplicates.Iterator(); iter.HasNext(); {
+		digest, files := iter.Next()
 		if len(files) <= 1 {
 			duplicates.Remove(digest)
 		}

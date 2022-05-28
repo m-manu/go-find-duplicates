@@ -44,7 +44,8 @@ func createTextFileReport(reportFileName string, report bytes.Buffer) {
 func getReportAsText(duplicates *entity.DigestToFiles) bytes.Buffer {
 	var bb bytes.Buffer
 	bb.Grow(duplicates.Size() * bytesPerLineGuess)
-	for digest, paths := range duplicates.Map() {
+	for iter := duplicates.Iterator(); iter.HasNext(); {
+		digest, paths := iter.Next()
 		bb.WriteString(fmt.Sprintf("%s: %d duplicate(s)\n", digest, len(paths)-1))
 		for _, path := range paths {
 			bb.WriteString(fmt.Sprintf("\t%s\n", path))
@@ -67,7 +68,8 @@ func createCsvReport(duplicates *entity.DigestToFiles, allFiles entity.FilePathT
 	bb.Grow(duplicates.Size() * bytesPerLineGuess)
 	cf := csv.NewWriter(&bb)
 	cf.Write([]string{"file hash", "file size", "last modified", "file path"})
-	for digest, paths := range duplicates.Map() {
+	for iter := duplicates.Iterator(); iter.HasNext(); {
+		digest, paths := iter.Next()
 		for _, path := range paths {
 			cf.Write([]string{
 				digest.FileHash,
@@ -88,9 +90,10 @@ func createJSONReport(duplicates *entity.DigestToFiles, reportFileName string) e
 		Paths []string `json:"paths"`
 	}
 	var duplicatesToMarshall []duplicateFile
-	for digest, paths := range duplicates.Map() {
+	for iter := duplicates.Iterator(); iter.HasNext(); {
+		digest, paths := iter.Next()
 		duplicatesToMarshall = append(duplicatesToMarshall, duplicateFile{
-			digest,
+			*digest,
 			paths,
 		})
 	}
