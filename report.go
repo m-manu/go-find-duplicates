@@ -8,6 +8,7 @@ import (
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -46,6 +47,7 @@ func getReportAsText(duplicates *entity.DigestToFiles) bytes.Buffer {
 	bb.Grow(duplicates.Size() * bytesPerLineGuess)
 	for iter := duplicates.Iterator(); iter.HasNext(); {
 		digest, paths := iter.Next()
+		sort.Strings(paths)
 		bb.WriteString(fmt.Sprintf("%s: %d duplicate(s)\n", digest, len(paths)-1))
 		for _, path := range paths {
 			bb.WriteString(fmt.Sprintf("\t%s\n", path))

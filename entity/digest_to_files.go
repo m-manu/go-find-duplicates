@@ -20,7 +20,19 @@ func FileDigestComparator(a, b interface{}) int {
 	} else if fa.FileSize > fb.FileSize {
 		return -1
 	} else {
-		return 0
+		if fa.FileExtension < fb.FileExtension {
+			return 1
+		} else if fa.FileExtension > fb.FileExtension {
+			return -1
+		} else {
+			if fa.FileHash < fb.FileHash {
+				return 1
+			} else if fa.FileHash > fb.FileHash {
+				return -1
+			} else {
+				return 0
+			}
+		}
 	}
 }
 
@@ -40,7 +52,6 @@ func (m *DigestToFiles) Set(key FileDigest, value string) {
 	if found {
 		values = valuesRaw.([]string)
 		values = append(values, value)
-		m.data.Put(key, values)
 	} else {
 		values = []string{value}
 	}
@@ -49,7 +60,7 @@ func (m *DigestToFiles) Set(key FileDigest, value string) {
 }
 
 // Remove removes entry in the map
-func (m *DigestToFiles) Remove(fd *FileDigest) {
+func (m *DigestToFiles) Remove(fd FileDigest) {
 	m.data.Remove(fd)
 }
 

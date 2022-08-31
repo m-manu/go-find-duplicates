@@ -101,11 +101,15 @@ func computeDigestsAndGroupThem(shortlist entity.FileExtAndSizeToFiles, parallel
 	}
 	wg.Wait()
 	// Remove non-duplicates
+	var duplicateKeys []entity.FileDigest
 	for iter := duplicates.Iterator(); iter.HasNext(); {
 		digest, files := iter.Next()
 		if len(files) <= 1 {
-			duplicates.Remove(digest)
+			duplicateKeys = append(duplicateKeys, *digest)
 		}
+	}
+	for _, key := range duplicateKeys {
+		duplicates.Remove(key)
 	}
 	return
 }
