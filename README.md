@@ -10,6 +10,13 @@
 A blazingly-fast simple-to-use tool to find duplicate files (photos, videos, music, documents etc.) on your computer,
 portable hard drives etc.
 
+**Note**:
+
+ * This tool just *reads* your files and creates a 'duplicates report' file
+ * It does **not** delete or otherwise modify your files in any way 🙂
+ * So, it's very safe to use 👍
+
+
 ## How to install?
 
 1. Install Go version at least **1.17**
@@ -28,9 +35,6 @@ portable hard drives etc.
 ```bash
 go-find-duplicates {dir-1} {dir-2} ... {dir-n}
 ```
-
-Above command just creates a *duplicates report*. Note that this tool just reads your files. It does *not* delete or
-otherwise modify your files in any way.
 
 ## Command line options
 
