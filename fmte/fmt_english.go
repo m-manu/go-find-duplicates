@@ -16,14 +16,14 @@ func init() {
 }
 
 // Printf is goroutine-safe fmt.Printf for English
-func Printf(format string, a ...interface{}) {
+func Printf(format string, a ...any) {
 	mxStdOut.Lock()
 	_, _ = p.Printf(format, a...)
 	mxStdOut.Unlock()
 }
 
 // PrintfErr is goroutine-safe fmt.Printf to StdErr for English
-func PrintfErr(format string, a ...interface{}) {
+func PrintfErr(format string, a ...any) {
 	mxStdErr.Lock()
 	_, _ = p.Fprintf(os.Stderr, format, a...)
 	mxStdErr.Unlock()

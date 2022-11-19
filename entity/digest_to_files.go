@@ -12,7 +12,7 @@ type DigestToFiles struct {
 	data *treemap.Map
 }
 
-func FileDigestComparator(a, b interface{}) int {
+func FileDigestComparator(a, b any) int {
 	fa := a.(FileDigest)
 	fb := b.(FileDigest)
 	if fa.FileSize < fb.FileSize {

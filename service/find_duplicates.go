@@ -12,7 +12,7 @@ import (
 )
 
 // FindDuplicates finds duplicate files in a given set of directories and matching criteria
-func FindDuplicates(directories []string, excludedFiles map[string]struct{}, fileSizeThreshold int64, parallelism int,
+func FindDuplicates(directories []string, excludedFiles utils.Set[string], fileSizeThreshold int64, parallelism int,
 	isThorough bool) (
 	duplicates *entity.DigestToFiles, duplicateTotalCount int64, savingsSize int64,
 	allFiles entity.FilePathToMeta, err error,

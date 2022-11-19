@@ -41,7 +41,7 @@ var defaultExclusionsStr string
 var flags struct {
 	isHelp           func() bool
 	getOutputMode    func() string
-	getExcludedFiles func() map[string]struct{}
+	getExcludedFiles func() utils.Set[string]
 	getMinSize       func() int64
 	getParallelism   func() int
 	isThorough       func() bool
@@ -55,9 +55,9 @@ func setupExclusionsOpt() {
 		fmt.Sprintf("path to file containing newline-separated list of file/directory names to be excluded\n"+
 			"(if this is not set, by default these will be ignored:\n%s etc.)",
 			strings.Join(defaultExclusionsExamples, ", ")))
-	flags.getExcludedFiles = func() map[string]struct{} {
+	flags.getExcludedFiles = func() utils.Set[string] {
 		excludesListFilePath := *excludesListFilePathPtr
-		var exclusions map[string]struct{}
+		var exclusions utils.Set[string]
 		if excludesListFilePath == exclusionsDefaultValue {
 			exclusions = defaultExclusions
 		} else {
@@ -202,7 +202,7 @@ func setupFlags() {
 
 func main() {
 	defer handlePanic()
-	runID := time.Now().Format("150405")
+	runID := time.Now().Format("060102_150405")
 	setupFlags()
 	flag.Parse()
 	if flags.isHelp() {
@@ -247,10 +247,11 @@ func createReportFileIfApplicable(runID string, outputMode string) (reportFileNa
 	} else if outputMode == entity.OutputModeJSON {
 		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
 	}
-	_, err := os.Create(reportFileName)
+	f, err := os.Create(reportFileName)
 	if err != nil {
 		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
 		os.Exit(exitCodeReportFileCreationFailed)
 	}
+	f.Close()
 	return
 }

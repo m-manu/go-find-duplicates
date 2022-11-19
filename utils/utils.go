@@ -25,11 +25,11 @@ func IsReadableFile(path string) bool {
 }
 
 // LineSeparatedStrToMap converts a line-separated string to a map with keys and empty values
-func LineSeparatedStrToMap(lineSeparatedString string) (set map[string]struct{}, firstFew []string) {
-	set = map[string]struct{}{}
+func LineSeparatedStrToMap(lineSeparatedString string) (set Set[string], firstFew []string) {
+	set = NewSet[string]()
 	firstFew = []string{}
 	for _, e := range strings.Split(lineSeparatedString, "\n") {
-		set[e] = struct{}{}
+		set.Add(e)
 		firstFew = append(firstFew, e)
 	}
 	if len(firstFew) > 3 {
@@ -37,7 +37,7 @@ func LineSeparatedStrToMap(lineSeparatedString string) (set map[string]struct{},
 	}
 	for e := range set {
 		if strings.TrimSpace(e) == "" {
-			delete(set, e)
+			set.Delete(e)
 		}
 	}
 	return

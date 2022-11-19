@@ -12,14 +12,13 @@ portable hard drives etc.
 
 **Note**:
 
- * This tool just *reads* your files and creates a 'duplicates report' file
- * It does **not** delete or otherwise modify your files in any way 🙂
- * So, it's very safe to use 👍
-
+* This tool just *reads* your files and creates a 'duplicates report' file
+* It does **not** delete or otherwise modify your files in any way 🙂
+* So, it's very safe to use 👍
 
 ## How to install?
 
-1. Install Go version at least **1.17**
+1. Install Go version at least **1.18**
     * See: [Go installation instructions](https://go.dev/doc/install)
 2. Run command:
    ```bash

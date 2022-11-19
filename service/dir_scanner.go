@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
+	"github.com/m-manu/go-find-duplicates/utils"
 	"io/fs"
 	"path/filepath"
 	"strings"
 )
 
-func populateFilesFromDirectory(dirPathToScan string, exclusions map[string]struct{}, fileSizeThreshold int64,
+func populateFilesFromDirectory(dirPathToScan string, exclusions utils.Set[string], fileSizeThreshold int64,
 	allFiles entity.FilePathToMeta) (
 	sizeOfScannedFiles int64,
 	err error,
@@ -21,7 +22,7 @@ func populateFilesFromDirectory(dirPathToScan string, exclusions map[string]stru
 			return nil
 		}
 		// If the file/directory is in excluded allFiles list, ignore it
-		if _, exists := exclusions[d.Name()]; exists {
+		if exclusions.Exists(d.Name()) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
