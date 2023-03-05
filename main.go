@@ -36,7 +36,7 @@ const (
 	exitCodeWritingToReportFileFailed
 )
 
-const version = "1.6.0"
+const version = "1.7.0"
 
 //go:embed default_exclusions.txt
 var defaultExclusionsStr string
