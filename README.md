@@ -18,7 +18,7 @@ portable hard drives etc.
 
 ## How to install?
 
-1. Install Go version at least **1.18**
+1. Install Go version at least **1.19**
     * See: [Go installation instructions](https://go.dev/doc/install)
 2. Run command:
    ```bash
@@ -63,6 +63,7 @@ Flags (all optional):
   -p, --parallelism uint8   extent of parallelism (defaults to number of cores minus 1)
   -t, --thorough            apply thorough check of uniqueness of files
                             (caution: this makes the scan very slow!)
+      --version             Display version (1.6.0) and exit (useful for incorporating this in scripts)
 
 For more details: https://github.com/m-manu/go-find-duplicates
 ```

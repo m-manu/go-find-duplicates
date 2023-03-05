@@ -1,6 +1,7 @@
 package utils
 
 import (
+	set "github.com/deckarep/golang-set/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,21 +26,22 @@ func IsReadableFile(path string) bool {
 }
 
 // LineSeparatedStrToMap converts a line-separated string to a map with keys and empty values
-func LineSeparatedStrToMap(lineSeparatedString string) (set Set[string], firstFew []string) {
-	set = NewSet[string]()
+func LineSeparatedStrToMap(lineSeparatedString string) (entries set.Set[string], firstFew []string) {
+	entries = set.NewThreadUnsafeSet[string]()
 	firstFew = []string{}
 	for _, e := range strings.Split(lineSeparatedString, "\n") {
-		set.Add(e)
+		entries.Add(strings.TrimSpace(e))
 		firstFew = append(firstFew, e)
 	}
 	if len(firstFew) > 3 {
 		firstFew = firstFew[0:3]
 	}
-	for e := range set {
-		if strings.TrimSpace(e) == "" {
-			set.Delete(e)
+	entries.Each(func(e string) bool {
+		if e == "" {
+			entries.Remove(e)
 		}
-	}
+		return false
+	})
 	return
 }
 

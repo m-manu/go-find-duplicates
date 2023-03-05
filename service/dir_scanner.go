@@ -3,15 +3,16 @@ package service
 import (
 	"errors"
 	"fmt"
+	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
-	"github.com/m-manu/go-find-duplicates/utils"
 	"io/fs"
 	"path/filepath"
 	"strings"
 )
 
-func populateFilesFromDirectory(dirPathToScan string, exclusions utils.Set[string], fileSizeThreshold int64,
+// populateFilesFromDirectory scans the given directory and populates the given map with the files
+func populateFilesFromDirectory(dirPathToScan string, exclusions set.Set[string], fileSizeThreshold int64,
 	allFiles entity.FilePathToMeta) (
 	sizeOfScannedFiles int64,
 	err error,
@@ -22,7 +23,7 @@ func populateFilesFromDirectory(dirPathToScan string, exclusions utils.Set[strin
 			return nil
 		}
 		// If the file/directory is in excluded allFiles list, ignore it
-		if exclusions.Exists(d.Name()) {
+		if exclusions.Contains(d.Name()) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}

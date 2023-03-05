@@ -8,6 +8,7 @@ type FileExtAndSize struct {
 	FileSize      int64
 }
 
+// String returns a string representation of FileExtAndSize
 func (f FileExtAndSize) String() string {
 	return fmt.Sprintf("%v/%v", f.FileExtension, f.FileSize)
 }

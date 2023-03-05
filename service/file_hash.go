@@ -33,6 +33,9 @@ func GetDigest(path string, isThorough bool) (entity.FileDigest, error) {
 	}, nil
 }
 
+// fileHash calculates the hash of the file provided.
+// If isThorough is true, then it uses SHA256 of the entire file.
+// Otherwise, it uses CRC32 of "crucial bytes" of the file.
 func fileHash(path string, isThorough bool) (string, error) {
 	fileInfo, statErr := os.Lstat(path)
 	if statErr != nil {
@@ -70,6 +73,7 @@ func fileHash(path string, isThorough bool) (string, error) {
 	return prefix + hex.EncodeToString(hashBytes), nil
 }
 
+// readCrucialBytes reads the first few bytes, middle bytes and last few bytes of the file
 func readCrucialBytes(filePath string, fileSize int64) ([]byte, error) {
 	file, err := os.Open(filePath)
 	if err != nil {

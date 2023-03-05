@@ -12,6 +12,7 @@ type FileDigest struct {
 	FileHash      string `json:"hash"`
 }
 
+// String returns a string representation of FileDigest
 func (f FileDigest) String() string {
 	return fmt.Sprintf("%v/%v/%v", f.FileExtension, f.FileHash, bytesutil.BinaryFormat(f.FileSize))
 }

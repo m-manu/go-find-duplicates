@@ -12,6 +12,7 @@ type DigestToFiles struct {
 	data *treemap.Map
 }
 
+// FileDigestComparator is a comparator for FileDigest that compares FileSize, FileExtension and FileHash in that order
 func FileDigestComparator(a, b any) int {
 	fa := a.(FileDigest)
 	fb := b.(FileDigest)
@@ -73,14 +74,17 @@ type digestToFilesIterator struct {
 	iter treemap.Iterator
 }
 
+// Iterator returns an iterator for a DigestToFiles	map
 func (m *DigestToFiles) Iterator() *digestToFilesIterator {
 	return &digestToFilesIterator{m.data.Iterator()}
 }
 
+// HasNext returns true if there are more elements in the iterator
 func (m *digestToFilesIterator) HasNext() bool {
 	return m.iter.Next()
 }
 
+// Next returns the next element in the iterator
 func (m *digestToFilesIterator) Next() (digest *FileDigest, paths []string) {
 	fd := m.iter.Key().(FileDigest)
 	filePaths := m.iter.Value().([]string)

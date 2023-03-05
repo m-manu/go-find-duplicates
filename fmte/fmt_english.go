@@ -9,22 +9,34 @@ import (
 
 var p *message.Printer
 
-var mxStdOut, mxStdErr sync.Mutex
+var mx sync.Mutex
 
 func init() {
 	p = message.NewPrinter(language.English)
 }
 
+var normalPrint = true
+
+func Off() {
+	normalPrint = false
+}
+
 // Printf is goroutine-safe fmt.Printf for English
 func Printf(format string, a ...any) {
-	mxStdOut.Lock()
+	if !normalPrint {
+		return
+	}
+	mx.Lock()
 	_, _ = p.Printf(format, a...)
-	mxStdOut.Unlock()
+	mx.Unlock()
 }
 
 // PrintfErr is goroutine-safe fmt.Printf to StdErr for English
 func PrintfErr(format string, a ...any) {
-	mxStdErr.Lock()
+	if !normalPrint {
+		return
+	}
+	mx.Lock()
 	_, _ = p.Fprintf(os.Stderr, format, a...)
-	mxStdErr.Unlock()
+	mx.Unlock()
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
@@ -12,7 +13,7 @@ import (
 )
 
 // FindDuplicates finds duplicate files in a given set of directories and matching criteria
-func FindDuplicates(directories []string, excludedFiles utils.Set[string], fileSizeThreshold int64, parallelism int,
+func FindDuplicates(directories []string, excludedFiles set.Set[string], fileSizeThreshold int64, parallelism int,
 	isThorough bool) (
 	duplicates *entity.DigestToFiles, duplicateTotalCount int64, savingsSize int64,
 	allFiles entity.FilePathToMeta, err error,
@@ -114,6 +115,7 @@ func computeDigestsAndGroupThem(shortlist entity.FileExtAndSizeToFiles, parallel
 	return
 }
 
+// identifyShortList identifies the files that may have duplicates
 func identifyShortList(filesAndMeta entity.FilePathToMeta) (shortlist entity.FileExtAndSizeToFiles) {
 	shortlist = make(entity.FileExtAndSizeToFiles, len(filesAndMeta))
 	// Group the files that have same extension and same size

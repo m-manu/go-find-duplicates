@@ -7,6 +7,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
@@ -35,16 +36,19 @@ const (
 	exitCodeWritingToReportFileFailed
 )
 
+const version = "1.6.0"
+
 //go:embed default_exclusions.txt
 var defaultExclusionsStr string
 
 var flags struct {
 	isHelp           func() bool
 	getOutputMode    func() string
-	getExcludedFiles func() utils.Set[string]
+	getExcludedFiles func() set.Set[string]
 	getMinSize       func() int64
 	getParallelism   func() int
 	isThorough       func() bool
+	getVersion       func() bool
 }
 
 func setupExclusionsOpt() {
@@ -55,9 +59,9 @@ func setupExclusionsOpt() {
 		fmt.Sprintf("path to file containing newline-separated list of file/directory names to be excluded\n"+
 			"(if this is not set, by default these will be ignored:\n%s etc.)",
 			strings.Join(defaultExclusionsExamples, ", ")))
-	flags.getExcludedFiles = func() utils.Set[string] {
+	flags.getExcludedFiles = func() set.Set[string] {
 		excludesListFilePath := *excludesListFilePathPtr
-		var exclusions utils.Set[string]
+		var exclusions set.Set[string]
 		if excludesListFilePath == exclusionsDefaultValue {
 			exclusions = defaultExclusions
 		} else {
@@ -137,6 +141,14 @@ func setupOutputModeOpt() {
 	}
 }
 
+func setupVersionOpt() {
+	versionPtr := flag.Bool("version", false,
+		"Display version ("+version+") and exit (useful for incorporating this in scripts)")
+	flags.getVersion = func() bool {
+		return *versionPtr
+	}
+}
+
 func setupUsage() {
 	flag.Usage = func() {
 		fmte.PrintfErr("Run \"go-find-duplicates --help\" for usage\n")
@@ -198,15 +210,48 @@ func setupFlags() {
 	setupParallelismOpt()
 	setupThoroughOpt()
 	setupUsage()
+	setupVersionOpt()
+}
+
+func generateRunID() string {
+	return time.Now().Format("060102_150405")
+}
+
+func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
+	switch outputMode {
+	case entity.OutputModeStdOut:
+		return
+	case entity.OutputModeCsvFile:
+		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
+	case entity.OutputModeTextFile:
+		reportFileName = fmt.Sprintf("./duplicates_%s.txt", runID)
+	case entity.OutputModeJSON:
+		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
+	default:
+		panic("Bug in code")
+	}
+	f, err := os.Create(reportFileName)
+	if err != nil {
+		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
+		os.Exit(exitCodeReportFileCreationFailed)
+	}
+	_ = f.Close()
+	return
 }
 
 func main() {
 	defer handlePanic()
-	runID := time.Now().Format("060102_150405")
+	runID := generateRunID()
 	setupFlags()
 	flag.Parse()
 	if flags.isHelp() {
 		showHelpAndExit()
+		return
+	}
+	if flags.getVersion() {
+		fmt.Println(version)
+		os.Exit(exitCodeSuccess)
+		return
 	}
 	directories := readDirectories()
 	outputMode := flags.getOutputMode()
@@ -234,24 +279,4 @@ func main() {
 		fmte.PrintfErr("error while reporting to file: %+v\n", err)
 		os.Exit(exitCodeWritingToReportFileFailed)
 	}
-}
-
-func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
-	if outputMode == entity.OutputModeStdOut {
-		return
-	}
-	if outputMode == entity.OutputModeCsvFile {
-		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
-	} else if outputMode == entity.OutputModeTextFile {
-		reportFileName = fmt.Sprintf("./duplicates_%s.txt", runID)
-	} else if outputMode == entity.OutputModeJSON {
-		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
-	}
-	f, err := os.Create(reportFileName)
-	if err != nil {
-		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
-		os.Exit(exitCodeReportFileCreationFailed)
-	}
-	f.Close()
-	return
 }

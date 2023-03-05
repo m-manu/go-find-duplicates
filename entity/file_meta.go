@@ -11,6 +11,7 @@ type FileMeta struct {
 	ModifiedTimestamp int64
 }
 
+// String returns a string representation of FileMeta
 func (f FileMeta) String() string {
 	return fmt.Sprintf("{size: %d, modified: %v}", f.Size, time.Unix(f.ModifiedTimestamp, 0))
 }

@@ -26,9 +26,12 @@ const (
 // Uses binary prefixes. See: https://en.m.wikipedia.org/wiki/Binary_prefix
 //
 // For example,
-//		fmt.Println(bytesutil.BinaryFormat(2140))
+//
+//	fmt.Println(bytesutil.BinaryFormat(2140))
+//
 // prints
-//		2.09 KiB
+//
+//	2.09 KiB
 func BinaryFormat(size int64) string {
 	if size < 0 {
 		return ""
@@ -53,9 +56,12 @@ func BinaryFormat(size int64) string {
 // Uses metric prefixes. See: https://en.m.wikipedia.org/wiki/Metric_prefix
 //
 // For example,
-//		fmt.Println(bytesutil.DecimalFormat(2140))
+//
+//	fmt.Println(bytesutil.DecimalFormat(2140))
+//
 // prints
-//		2.14KB
+//
+//	2.14KB
 func DecimalFormat(size int64) string {
 	if size < 0 {
 		return ""
