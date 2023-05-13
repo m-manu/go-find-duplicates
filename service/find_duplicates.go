@@ -2,14 +2,15 @@ package service
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
 	"github.com/m-manu/go-find-duplicates/fmte"
 	"github.com/m-manu/go-find-duplicates/utils"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // FindDuplicates finds duplicate files in a given set of directories and matching criteria

@@ -7,6 +7,13 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/debug"
+	"strings"
+	"time"
+
 	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
@@ -14,12 +21,6 @@ import (
 	"github.com/m-manu/go-find-duplicates/service"
 	"github.com/m-manu/go-find-duplicates/utils"
 	flag "github.com/spf13/pflag"
-	"os"
-	"path/filepath"
-	"runtime"
-	"runtime/debug"
-	"strings"
-	"time"
 )
 
 // Exit codes for this program
@@ -49,6 +50,7 @@ var flags struct {
 	getParallelism   func() int
 	isThorough       func() bool
 	getVersion       func() bool
+	getVerbose       func() bool
 }
 
 func setupExclusionsOpt() {
@@ -141,6 +143,13 @@ func setupOutputModeOpt() {
 	}
 }
 
+func setupVerboseOpt() {
+	verbosePtr := flag.Bool("verbose", false, "verbose output")
+	flags.getVerbose = func() bool {
+		return *verbosePtr
+	}
+}
+
 func setupVersionOpt() {
 	versionPtr := flag.Bool("version", false,
 		"Display version ("+version+") and exit (useful for incorporating this in scripts)")
@@ -210,6 +219,7 @@ func setupFlags() {
 	setupParallelismOpt()
 	setupThoroughOpt()
 	setupUsage()
+	setupVerboseOpt()
 	setupVersionOpt()
 }
 
@@ -252,6 +262,9 @@ func main() {
 		fmt.Println(version)
 		os.Exit(exitCodeSuccess)
 		return
+	}
+	if !flags.getVerbose() {
+		fmte.Off()
 	}
 	directories := readDirectories()
 	outputMode := flags.getOutputMode()
