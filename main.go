@@ -7,6 +7,14 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/debug"
+	"strings"
+	"time"
+
 	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
@@ -14,12 +22,6 @@ import (
 	"github.com/m-manu/go-find-duplicates/service"
 	"github.com/m-manu/go-find-duplicates/utils"
 	flag "github.com/spf13/pflag"
-	"os"
-	"path/filepath"
-	"runtime"
-	"runtime/debug"
-	"strings"
-	"time"
 )
 
 // Exit codes for this program
@@ -48,6 +50,8 @@ var flags struct {
 	getMinSize       func() int64
 	getParallelism   func() int
 	isThorough       func() bool
+	useStdout        func() bool
+	getVerbose       func() bool
 	getVersion       func() bool
 }
 
@@ -141,6 +145,20 @@ func setupOutputModeOpt() {
 	}
 }
 
+func setupStdoutOpt() {
+	stdoutPtr := flag.Bool("stdout", false, "report output to stdout")
+	flags.useStdout = func() bool {
+		return *stdoutPtr
+	}
+}
+
+func setupVerboseOpt() {
+	verbosePtr := flag.Bool("verbose", false, "verbose output")
+	flags.getVerbose = func() bool {
+		return *verbosePtr
+	}
+}
+
 func setupVersionOpt() {
 	versionPtr := flag.Bool("version", false,
 		"Display version ("+version+") and exit (useful for incorporating this in scripts)")
@@ -208,8 +226,10 @@ func setupFlags() {
 	setupMinSizeOpt()
 	setupOutputModeOpt()
 	setupParallelismOpt()
+	setupStdoutOpt()
 	setupThoroughOpt()
 	setupUsage()
+	setupVerboseOpt()
 	setupVersionOpt()
 }
 
@@ -217,10 +237,14 @@ func generateRunID() string {
 	return time.Now().Format("060102_150405")
 }
 
-func createReportFileIfApplicable(runID string, outputMode string) (reportFileName string) {
+func createReportFileIfApplicable(runID string, outputMode string, useStdout bool) (string, io.WriteCloser) {
+	if useStdout {
+		return "", os.Stdout
+	}
+	var reportFileName string
 	switch outputMode {
 	case entity.OutputModeStdOut:
-		return
+		return "", os.Stdout
 	case entity.OutputModeCsvFile:
 		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
 	case entity.OutputModeTextFile:
@@ -228,15 +252,15 @@ func createReportFileIfApplicable(runID string, outputMode string) (reportFileNa
 	case entity.OutputModeJSON:
 		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
 	default:
-		panic("Bug in code")
+		panic("unsupport output mode")
 	}
+
 	f, err := os.Create(reportFileName)
 	if err != nil {
 		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
 		os.Exit(exitCodeReportFileCreationFailed)
 	}
-	_ = f.Close()
-	return
+	return reportFileName, f
 }
 
 func main() {
@@ -253,9 +277,15 @@ func main() {
 		os.Exit(exitCodeSuccess)
 		return
 	}
+	if !flags.getVerbose() {
+		fmte.Off()
+	}
+
 	directories := readDirectories()
 	outputMode := flags.getOutputMode()
-	reportFileName := createReportFileIfApplicable(runID, outputMode)
+	reportFileName, reportFile := createReportFileIfApplicable(runID, outputMode, flags.useStdout())
+	defer reportFile.Close()
+
 	duplicates, duplicateTotalCount, savingsSize, allFiles, fdErr :=
 		service.FindDuplicates(directories, flags.getExcludedFiles(), flags.getMinSize(),
 			flags.getParallelism(), flags.isThorough())
@@ -274,9 +304,11 @@ func main() {
 	fmte.Printf("Found %d duplicates. A total of %s can be saved by removing them.\n",
 		duplicateTotalCount, bytesutil.BinaryFormat(savingsSize))
 
-	err := reportDuplicates(duplicates, outputMode, allFiles, runID, reportFileName)
+	err := reportDuplicates(duplicates, outputMode, allFiles, runID, reportFile)
 	if err != nil {
 		fmte.PrintfErr("error while reporting to file: %+v\n", err)
 		os.Exit(exitCodeWritingToReportFileFailed)
+	} else if reportFileName != "" {
+		fmte.Printf("View duplicates report here: %s\n", reportFileName)
 	}
 }
