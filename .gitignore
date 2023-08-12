@@ -5,3 +5,4 @@ go-find-duplicates
 *.csv
 *.json
 *.sh
+.DS_Store
