@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine3.17 as builder
+FROM golang:1.22-alpine3.19 AS builder
 
 RUN apk --no-cache add build-base
 
@@ -14,7 +14,7 @@ RUN go build
 
 RUN go test ./...
 
-FROM alpine:3.17
+FROM alpine:3.19
 
 RUN apk --no-cache add bash
 

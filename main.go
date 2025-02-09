@@ -7,14 +7,6 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"runtime"
-	"runtime/debug"
-	"strings"
-	"time"
-
 	set "github.com/deckarep/golang-set/v2"
 	"github.com/m-manu/go-find-duplicates/bytesutil"
 	"github.com/m-manu/go-find-duplicates/entity"
@@ -22,6 +14,13 @@ import (
 	"github.com/m-manu/go-find-duplicates/service"
 	"github.com/m-manu/go-find-duplicates/utils"
 	flag "github.com/spf13/pflag"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/debug"
+	"strings"
+	"time"
 )
 
 // Exit codes for this program
@@ -38,7 +37,7 @@ const (
 	exitCodeWritingToReportFileFailed
 )
 
-const version = "1.7.0"
+const version = "1.8.0"
 
 //go:embed default_exclusions.txt
 var defaultExclusionsStr string
@@ -161,7 +160,7 @@ func setupVerboseOpt() {
 
 func setupVersionOpt() {
 	versionPtr := flag.Bool("version", false,
-		"Display version ("+version+") and exit (useful for incorporating this in scripts)")
+		"display version ("+version+") and exit (useful for incorporating this in scripts)")
 	flags.getVersion = func() bool {
 		return *versionPtr
 	}

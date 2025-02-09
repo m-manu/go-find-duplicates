@@ -1,13 +1,13 @@
 module github.com/m-manu/go-find-duplicates
 
-go 1.19
+go 1.22
 
 require (
-	github.com/deckarep/golang-set/v2 v2.1.0
+	github.com/deckarep/golang-set/v2 v2.7.0
 	github.com/emirpasic/gods v1.18.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.1
-	golang.org/x/text v0.7.0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/text v0.21.0
 )
 
 require (

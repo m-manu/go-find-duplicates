@@ -18,7 +18,7 @@ portable hard drives etc.
 
 ## How to install?
 
-1. Install Go version at least **1.19**
+1. Install Go version at least **1.22**
     * See: [Go installation instructions](https://go.dev/doc/install)
 2. Run command:
    ```bash
@@ -31,11 +31,13 @@ portable hard drives etc.
 
 ## How to use?
 
+### Run directly (preferred)
+
 ```bash
 go-find-duplicates {dir-1} {dir-2} ... {dir-n}
 ```
 
-## Command line options
+### Command line options
 
 Running `go-find-duplicates --help` displays following:
 
@@ -68,7 +70,7 @@ Flags (all optional):
 For more details: https://github.com/m-manu/go-find-duplicates
 ```
 
-## Running this through a Docker container
+### Run via Docker
 
 ```bash
 docker run --rm -v /Volumes/PortableHD:/mnt/PortableHD manumk/go-find-duplicates:latest go-find-duplicates -o print /mnt/PortableHD
@@ -92,3 +94,9 @@ SHA-256 hash of *entire file contents*. But remember, with this, scan becomes mu
 
 When tested on my portable hard drive containing >172k files (videos, audio files, images and documents), with and
 without `--thorough` option, the results were same!
+
+## How to build?
+
+```shell
+go build 
+```
