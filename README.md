@@ -57,15 +57,17 @@ Flags (all optional):
   -h, --help                display help
   -m, --minsize uint        minimum size of file in KiB to consider (default 4)
   -o, --output string       following modes are accepted:
-                             text = creates a text file in current directory with basic information
-                              csv = creates a csv file in current directory with detailed information
                             print = just prints the report without creating any file
-                             json = creates a JSON file in the current directory with basic information
+                             text = creates a text file in the output directory with basic information
+                              csv = creates a csv file in the output directory with detailed information
+                             json = creates a JSON file in the output directory with basic information
                              (default "text")
+  -f, --outputfile string   output file path (will be created, but directory needs to be writeable)
   -p, --parallelism uint8   extent of parallelism (defaults to number of cores minus 1)
+  -q, --quiet               quiet mode: no output on stdout/stderr, except for duplicates/errors
   -t, --thorough            apply thorough check of uniqueness of files
                             (caution: this makes the scan very slow!)
-      --version             Display version (1.6.0) and exit (useful for incorporating this in scripts)
+      --version             display version (1.8.0) and exit (useful for incorporating this in scripts)
 
 For more details: https://github.com/m-manu/go-find-duplicates
 ```
