@@ -34,7 +34,7 @@ const (
 	exitCodeErrorCreatingReport
 	exitCodeInvalidOutputMode
 	exitCodeReportFileCreationFailed
-	exitCodeWritingToReportFileFailed
+	exitCodeOutputDirectoryIsNotReadable
 )
 
 const version = "1.8.0"
@@ -43,15 +43,15 @@ const version = "1.8.0"
 var defaultExclusionsStr string
 
 var flags struct {
-	isHelp           func() bool
-	getOutputMode    func() string
-	getExcludedFiles func() set.Set[string]
-	getMinSize       func() int64
-	getParallelism   func() int
-	isThorough       func() bool
-	useStdout        func() bool
-	getVerbose       func() bool
-	getVersion       func() bool
+	isHelp            func() bool
+	getOutputMode     func() string
+	getExcludedFiles  func() set.Set[string]
+	getMinSize        func() int64
+	getParallelism    func() int
+	isThorough        func() bool
+	getOutputFilePath func() string
+	getVersion        func() bool
+	isQuiet           func() bool
 }
 
 func setupExclusionsOpt() {
@@ -144,17 +144,19 @@ func setupOutputModeOpt() {
 	}
 }
 
-func setupStdoutOpt() {
-	stdoutPtr := flag.Bool("stdout", false, "report output to stdout")
-	flags.useStdout = func() bool {
-		return *stdoutPtr
-	}
-}
+const DefaultFileName = ""
 
-func setupVerboseOpt() {
-	verbosePtr := flag.Bool("verbose", false, "verbose output")
-	flags.getVerbose = func() bool {
-		return *verbosePtr
+func setupOutputFileOpt() {
+	outputFilePathPtr := flag.StringP("outputfile", "f", DefaultFileName,
+		"output file path (will be created, but directory needs to be writeable)")
+	flags.getOutputFilePath = func() string {
+		outputFilePath := *outputFilePathPtr
+		outputDir := filepath.Dir(outputFilePath)
+		if !utils.IsReadableDirectory(outputDir) { // Deliberately not checking whether directory is writable
+			fmte.PrintfErr("error: output directory '%s' does not exist or is not readable\n", outputDir)
+			os.Exit(exitCodeOutputDirectoryIsNotReadable)
+		}
+		return outputFilePath
 	}
 }
 
@@ -163,6 +165,14 @@ func setupVersionOpt() {
 		"display version ("+version+") and exit (useful for incorporating this in scripts)")
 	flags.getVersion = func() bool {
 		return *versionPtr
+	}
+}
+
+func setupQuietOpt() {
+	isQuietPtr := flag.BoolP("quiet", "q", false,
+		"quiet mode: no output on stdout/stderr, except for duplicates/errors")
+	flags.isQuiet = func() bool {
+		return *isQuietPtr
 	}
 }
 
@@ -220,30 +230,25 @@ For more details: https://github.com/m-manu/go-find-duplicates
 }
 
 func setupFlags() {
+	setupUsage()
 	setupExclusionsOpt()
 	setupHelpOpt()
 	setupMinSizeOpt()
 	setupOutputModeOpt()
 	setupParallelismOpt()
-	setupStdoutOpt()
 	setupThoroughOpt()
-	setupUsage()
-	setupVerboseOpt()
 	setupVersionOpt()
+	setupQuietOpt()
+	setupOutputFileOpt()
 }
 
 func generateRunID() string {
 	return time.Now().Format("060102_150405")
 }
 
-func createReportFileIfApplicable(runID string, outputMode string, useStdout bool) (string, io.WriteCloser) {
-	if useStdout {
-		return "", os.Stdout
-	}
+func createReportFileIfApplicable(runID string, outputMode string) (string, io.WriteCloser) {
 	var reportFileName string
 	switch outputMode {
-	case entity.OutputModeStdOut:
-		return "", os.Stdout
 	case entity.OutputModeCsvFile:
 		reportFileName = fmt.Sprintf("./duplicates_%s.csv", runID)
 	case entity.OutputModeTextFile:
@@ -251,9 +256,8 @@ func createReportFileIfApplicable(runID string, outputMode string, useStdout boo
 	case entity.OutputModeJSON:
 		reportFileName = fmt.Sprintf("./duplicates_%s.json", runID)
 	default:
-		panic("unsupport output mode")
+		panic("unsupported output mode - bug in code")
 	}
-
 	f, err := os.Create(reportFileName)
 	if err != nil {
 		fmte.PrintfErr("error: couldn't create report file: %+v\n", err)
@@ -276,14 +280,29 @@ func main() {
 		os.Exit(exitCodeSuccess)
 		return
 	}
-	if !flags.getVerbose() {
+
+	if flags.isQuiet() {
 		fmte.Off()
 	}
 
 	directories := readDirectories()
 	outputMode := flags.getOutputMode()
-	reportFileName, reportFile := createReportFileIfApplicable(runID, outputMode, flags.useStdout())
-	defer reportFile.Close()
+	reportFileName := flags.getOutputFilePath()
+	var reportFile io.Writer
+	var fErr error
+	if outputMode == entity.OutputModeStdOut {
+		reportFile = os.Stdout
+	} else { // For other modes
+		if reportFileName == DefaultFileName {
+			reportFileName, reportFile = createReportFileIfApplicable(runID, outputMode)
+		} else {
+			reportFile, fErr = os.Create(reportFileName)
+			if fErr != nil {
+				fmte.PrintfErr("error: couldn't create report file: %+v\n", fErr)
+				os.Exit(exitCodeReportFileCreationFailed)
+			}
+		}
+	}
 
 	duplicates, duplicateTotalCount, savingsSize, allFiles, fdErr :=
 		service.FindDuplicates(directories, flags.getExcludedFiles(), flags.getMinSize(),
@@ -303,11 +322,12 @@ func main() {
 	fmte.Printf("Found %d duplicates. A total of %s can be saved by removing them.\n",
 		duplicateTotalCount, bytesutil.BinaryFormat(savingsSize))
 
-	err := reportDuplicates(duplicates, outputMode, allFiles, runID, reportFile)
-	if err != nil {
-		fmte.PrintfErr("error while reporting to file: %+v\n", err)
-		os.Exit(exitCodeWritingToReportFileFailed)
-	} else if reportFileName != "" {
+	dErr := reportDuplicates(duplicates, outputMode, allFiles, runID, reportFile)
+	if dErr != nil {
+		fmte.PrintfErr("error while reporting to file: %+v\n", dErr)
+		os.Exit(exitCodeErrorCreatingReport)
+	}
+	if reportFileName != DefaultFileName {
 		fmte.Printf("View duplicates report here: %s\n", reportFileName)
 	}
 }

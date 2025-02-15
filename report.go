@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/m-manu/go-find-duplicates/entity"
-	"github.com/m-manu/go-find-duplicates/fmte"
 )
 
 const bytesPerLineGuess = 500
@@ -20,13 +18,10 @@ const bytesPerLineGuess = 500
 func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFiles entity.FilePathToMeta,
 	runID string, reportFile io.Writer) error {
 	var err error
-	if outputMode == entity.OutputModeStdOut || outputMode == entity.OutputModeTextFile {
-		reportBytes := getReportAsText(duplicates)
-		if outputMode == entity.OutputModeTextFile {
-			createTextFileReport(reportFile, reportBytes)
-		} else if outputMode == entity.OutputModeStdOut {
-			printReportToStdOut(runID, reportBytes)
-		}
+	if outputMode == entity.OutputModeStdOut {
+		printReportToStdOut(runID, duplicates)
+	} else if outputMode == entity.OutputModeTextFile {
+		err = createTextFileReport(duplicates, reportFile)
 	} else if outputMode == entity.OutputModeCsvFile {
 		err = createCsvReport(duplicates, allFiles, reportFile)
 	} else if outputMode == entity.OutputModeJSON {
@@ -35,12 +30,10 @@ func reportDuplicates(duplicates *entity.DigestToFiles, outputMode string, allFi
 	return err
 }
 
-func createTextFileReport(reportFile io.Writer, report bytes.Buffer) {
-	_, rcErr := reportFile.Write(report.Bytes())
-	if rcErr != nil {
-		fmte.PrintfErr("error while write to  report file: %+v\n", rcErr)
-		os.Exit(exitCodeErrorCreatingReport)
-	}
+func createTextFileReport(duplicates *entity.DigestToFiles, reportFile io.Writer) error {
+	reportBB := getReportAsText(duplicates)
+	_, rcErr := reportFile.Write(reportBB.Bytes())
+	return rcErr
 }
 
 func getReportAsText(duplicates *entity.DigestToFiles) bytes.Buffer {
@@ -57,13 +50,14 @@ func getReportAsText(duplicates *entity.DigestToFiles) bytes.Buffer {
 	return bb
 }
 
-func printReportToStdOut(runID string, bb bytes.Buffer) {
+func printReportToStdOut(runID string, duplicates *entity.DigestToFiles) {
+	reportBB := getReportAsText(duplicates)
 	fmt.Printf(`
 ==========================
 Report (run id %s)
 ==========================
 `, runID)
-	fmt.Printf(bb.String())
+	fmt.Println(reportBB.String())
 }
 
 func createCsvReport(duplicates *entity.DigestToFiles, allFiles entity.FilePathToMeta, reportFile io.Writer) error {
